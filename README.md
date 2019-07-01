@@ -1,6 +1,13 @@
 # saveredditsaves
-Saves a backup of your saved reddit posts to a file.
+## Description
+Saves a backup of your saved reddit posts to a file. The file will be JSON-formatted and contains your saved text submissions, link submissions and comments.
 
+Data kept:
+- id
+- author
+- content (link, HTML-formatted text, ...)
+
+## Usage
 Add a config file `conf.json` before running. Format:
 ```json
 {
