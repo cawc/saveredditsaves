@@ -8,7 +8,7 @@ IMAGE_FORMATS = ['.gif', '.jpg', '.png', '.bmp']
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--download', help='Download all images', action='store_true')
+    parser.add_argument('-d','--download', help='Download images from submissions', choices=['none', 'all', 'sfw', 'nsfw'], default='none')
     args = parser.parse_args()
 
     data = {}
@@ -30,8 +30,8 @@ def main():
             if save.is_self:
                 result['textsubmissions'].append(parse_text_submission(save))
             else:
-                if args.download:
-                    result['linksubmissions'].append(parse_link_submission_download_images(save))
+                if args.download != 'none':
+                    result['linksubmissions'].append(parse_link_submission_download_images(save, args.download))
                 else:
                     result['linksubmissions'].append(parse_link_submission(save))
         elif isinstance(save, praw.models.reddit.comment.Comment):
@@ -63,9 +63,12 @@ def parse_text_submission(submission):
     return res
 
 
-def parse_link_submission_download_images(submission):
+def parse_link_submission_download_images(submission, mode):
     res = parse_link_submission(submission)
+
     if res['url'].endswith(tuple(IMAGE_FORMATS)):
+        if (mode == 'sfw' and res['nsfw']) or (mode == 'nsfw' and not res['nsfw']):
+            return res
         filename = f'{res["id"]}.{res["url"].split(".")[-1]}'
         print(f'Downloading {filename}...')
         urllib.request.urlretrieve(res['url'], filename)
@@ -92,6 +95,7 @@ def parse(save):
     res = {}
 
     res['id'] = save.id
+    res['nsfw'] = bool(save.over_18)
     try:
         res['author'] = save.author.name
     except AttributeError:
