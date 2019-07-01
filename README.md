@@ -17,3 +17,4 @@ Add a config file `conf.json` before running. Format:
     "username": "USERNAME"
 }
 ```
+To find this information, see https://www.reddit.com/prefs/apps/ (you have to be logged in to see this page)
