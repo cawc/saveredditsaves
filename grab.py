@@ -1,8 +1,16 @@
 import praw
 import json
+import argparse
+import urllib
 from datetime import date
 
+IMAGE_FORMATS = ['.gif', '.jpg', '.png', '.bmp']
+
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--download', help='Download all images', action='store_true')
+    args = parser.parse_args()
+
     data = {}
     with open('conf.json', 'r') as json_file:
         data = json.load(json_file)
@@ -22,7 +30,10 @@ def main():
             if save.is_self:
                 result['textsubmissions'].append(parse_text_submission(save))
             else:
-                result['linksubmissions'].append(parse_link_submission(save))
+                if args.download:
+                    result['linksubmissions'].append(parse_link_submission_download_images(save))
+                else:
+                    result['linksubmissions'].append(parse_link_submission(save))
         elif isinstance(save, praw.models.reddit.comment.Comment):
             result['comments'].append(parse_comment(save))
         else:
@@ -49,6 +60,17 @@ def parse_text_submission(submission):
 
     res['selftext'] = submission.selftext_html
 
+    return res
+
+
+def parse_link_submission_download_images(submission):
+    res = parse_link_submission(submission)
+    if res['url'].endswith(tuple(IMAGE_FORMATS)):
+        filename = f'{res["id"]}.{res["url"].split(".")[-1]}'
+        print(f'Downloading {filename}...')
+        urllib.request.urlretrieve(res['url'], filename)
+        print(f'Downloaded {filename}')
+        res['file'] = filename
     return res
 
 def parse_link_submission(submission):

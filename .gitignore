@@ -2,3 +2,7 @@ conf.json
 *-redditsaves-*
 myenv
 .vscode
+*.jpg
+*.png
+*.bmp
+*.gif
