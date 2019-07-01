@@ -14,25 +14,69 @@ def main():
                         user_agent='Save grabber')
 
     saved = reddit.user.me().saved(limit=None)
-    
-    result = ''
+
+    result = {'linksubmissions': [], 'textsubmissions': [], 'comments': []}
+
     for save in saved:
         if isinstance(save, praw.models.reddit.submission.Submission):
-            result += f'SUBMISSION {save.id} - {save.title}'
             if save.is_self:
-                result += f'SELFTEXT_HTML {save.selftext_html}'
+                result['textsubmissions'].append(parse_text_submission(save))
             else:
-                result += f'URL {save.url}'
+                result['linksubmissions'].append(parse_link_submission(save))
         elif isinstance(save, praw.models.reddit.comment.Comment):
-            result += f'COMMENT {save.id}\nBODY "{save.body}"\nBODY_HTML "{save.body_html}"'
+            result['comments'].append(parse_comment(save))
         else:
-            result += f'UNKNOWN_TYPE {type(save)}'
-        result += '\n\n'
+            print(f'UNKNOWN_TYPE {type(save)}')
+
+    result_json = json.dumps(result)
 
     d = date.today().strftime("%Y%m%d")
 
-    with open(f'{d}-redditsaves-{data["username"]}.txt', 'w') as results:
-        results.write(result)
+    with open(f'{d}-redditsaves-{data["username"]}.json', 'w') as results:
+        results.write(result_json)
+
+    print('Done!')
+
+def parse_comment(comment):
+    res = parse(comment)
+
+    res['body'] = comment.body_html
+
+    return res
+
+def parse_text_submission(submission):
+    res = parse_submission(submission)
+
+    res['selftext'] = submission.selftext_html
+
+    return res
+
+def parse_link_submission(submission):
+    res = parse_submission(submission)
+
+    res['url'] = submission.url
+
+    return res
+
+def parse_submission(submission):
+    res = parse(submission)
+
+    res['title'] = submission.title
+    res['subreddit'] = submission.subreddit_name_prefixed
+
+    return res
+
+def parse(save):
+    res = {}
+
+    res['id'] = save.id
+    try:
+        res['author'] = save.author.name
+    except AttributeError:
+        print(f'{save.id} has no author, replacing with [deleted]')
+        res['author'] = '[deleted]'
+
+    return res
 
 if __name__ == "__main__":
     main()
