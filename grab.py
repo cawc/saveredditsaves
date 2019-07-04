@@ -9,6 +9,7 @@ IMAGE_FORMATS = ['.gif', '.jpg', '.png', '.bmp']
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-d','--download', help='Download images from submissions', choices=['none', 'all', 'sfw', 'nsfw'], default='none')
+    parser.add_argument('-o','--output', help='File to write the data to', type=str)
     args = parser.parse_args()
 
     data = {}
@@ -23,30 +24,41 @@ def main():
 
     saved = reddit.user.me().saved(limit=None)
 
+    result_json = json.dumps(process_saves(saved, args))
+
+    filename = ''
+    if args.output is None:
+        d = date.today().strftime("%Y%m%d")
+        filename = f'{d}-redditsaves-{data["username"]}.json'
+    else:
+        filename = args.output
+
+    save_json_to_file(result_json, filename)
+
+    print('Done!')
+
+def save_json_to_file(jsonstring, filename):
+    with open(filename, 'w') as results:
+        results.write(jsonstring)
+
+
+def process_saves(saves, args):
     result = {'linksubmissions': [], 'textsubmissions': [], 'comments': []}
 
-    for save in saved:
+    for save in saves:
         if isinstance(save, praw.models.reddit.submission.Submission):
             if save.is_self:
                 result['textsubmissions'].append(parse_text_submission(save))
             else:
                 if args.download != 'none':
-                    result['linksubmissions'].append(parse_link_submission_download_images(save, args.download))
+                    result['linksubmissions'].append(parse_link_submission_download_image(save, args.download))
                 else:
                     result['linksubmissions'].append(parse_link_submission(save))
         elif isinstance(save, praw.models.reddit.comment.Comment):
             result['comments'].append(parse_comment(save))
         else:
             print(f'UNKNOWN_TYPE {type(save)}')
-
-    result_json = json.dumps(result)
-
-    d = date.today().strftime("%Y%m%d")
-
-    with open(f'{d}-redditsaves-{data["username"]}.json', 'w') as results:
-        results.write(result_json)
-
-    print('Done!')
+    return result
 
 def parse_comment(comment):
     res = parse(comment)
@@ -63,7 +75,7 @@ def parse_text_submission(submission):
     return res
 
 
-def parse_link_submission_download_images(submission, mode):
+def parse_link_submission_download_image(submission, mode):
     res = parse_link_submission(submission)
 
     if res['url'].endswith(tuple(IMAGE_FORMATS)):
